@@ -1,7 +1,7 @@
 #!/bin/bash
 
-python3.7 -m pip install virtualenv
-python3.7 -m venv electra_env
+python3 -m pip install virtualenv
+python3 -m virtualenv --python=python3.7 electra_env
 source electra_env/bin/activate
 pip install -U pip
 pip install -r requirements.txt
