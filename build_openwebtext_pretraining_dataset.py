@@ -14,11 +14,15 @@
 # limitations under the License.
 
 """Preprocessess the Open WebText corpus for ELECTRA pre-training."""
+import sys
 
 import argparse
 import multiprocessing
 import os
 import random
+print(sys.path)
+print(os.getcwd())
+# sys.path.append("/home/npetroce/Desktop/classwork/CS2952C/electra-extension/electra_env/bin")
 import tarfile
 import time
 import tensorflow.compat.v1 as tf

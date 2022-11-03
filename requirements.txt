@@ -3,3 +3,4 @@ tensorflow==1.15
 numpy
 scikit-learn
 scipy
+protobuf==3.20.*
