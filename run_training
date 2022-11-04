@@ -1,0 +1,22 @@
+#!/bin/sh
+#
+#  Execute from the current working directory
+# -cwd
+#
+#  This is a long-running job
+# -l inf
+#
+#
+#
+# notify
+# -m abes
+#
+export PATH=/home/npetroce/Desktop/classwork/CS2952C/electra-extension/electra_env/bin:$PATH
+export DATA_DIR=/home/npetroce/data/
+#export LD_LIBRARY_PATH=/local/projects/python3.7/root-3.7.15/lib
+source electra_env/bin/activate
+which python3
+which python3.7
+echo $DATA_DIR
+echo $1
+#python3 run_pretraining.py --data-dir $DATA_DIR --num-processes 5
