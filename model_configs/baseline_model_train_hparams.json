@@ -3,5 +3,5 @@
 	"model_size":"small",
 	"do_train":true,
 	"do_eval":false,
-	"pretrain_tfrecords": "/home/npetroce/data/pretrain_tf_records/pretrain_data.tfrecord*"
+	"pretrain_tfrecords": "/home/npetroce/data/pretrain_tfrecords/pretrain_data.tfrecord*"
 }

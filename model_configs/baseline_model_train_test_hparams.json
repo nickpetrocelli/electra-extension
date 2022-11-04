@@ -4,5 +4,5 @@
 	"do_train":true,
 	"num_train_steps":10,
 	"do_eval":false,
-	"pretrain_tfrecords": "/home/npetroce/data/pretrain_tf_records/pretrain_data.tfrecord*"
+	"pretrain_tfrecords": "/home/npetroce/data/pretrain_tfrecords/pretrain_data.tfrecord*"
 }
