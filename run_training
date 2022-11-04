@@ -19,4 +19,5 @@ which python3
 which python3.7
 echo $DATA_DIR
 echo $1
-#python3 run_pretraining.py --data-dir $DATA_DIR --num-processes 5
+echo $2
+python3.7 run_pretraining.py --data-dir $DATA_DIR --model-name $1 --hparams $2
