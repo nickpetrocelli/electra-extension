@@ -119,10 +119,10 @@ class PretrainingModel(object):
     # Evaluation
 
     #NRP NOTE TODO: Trying to calculate MLM acc outside of metric function.
-    self.mlm_acc = tf.metrics.accuracy(
+    self.mlm_acc, _ = tf.metrics.accuracy(
           labels=tf.reshape(masked_inputs.masked_lm_ids, [-1]),
           predictions=tf.reshape(mlm_output.preds, [-1]),
-          weights=tf.reshape(masked_inputs.masked_lm_weights, [-1]))
+          weights=tf.reshape(masked_inputs.masked_lm_weights, [-1])).accuracy
 
     eval_fn_inputs = {
         "input_ids": masked_inputs.input_ids,
