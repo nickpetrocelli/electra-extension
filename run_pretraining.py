@@ -119,10 +119,13 @@ class PretrainingModel(object):
     # Evaluation
 
     #NRP NOTE TODO: Trying to calculate MLM acc outside of metric function.
-    self.mlm_acc, self.mlm_acc_2 = tf.metrics.accuracy(
+    # Based on documentation this should be accurate
+    self.mlm_acc, _ = tf.metrics.accuracy(
           labels=tf.reshape(masked_inputs.masked_lm_ids, [-1]),
           predictions=tf.reshape(mlm_output.preds, [-1]),
           weights=tf.reshape(masked_inputs.masked_lm_weights, [-1]))
+    #NRP NOTE TODO: this will need to change based on dynamic masking rate
+    self.effective_mask_rate = (1 - self.mlm_acc) * config.mask_prob
 
     eval_fn_inputs = {
         "input_ids": masked_inputs.input_ids,
@@ -388,7 +391,7 @@ def model_fn_builder(config: configure_pretraining.PretrainingConfig):
           loss=model.total_loss,
           train_op=train_op,
           training_hooks=[training_utils.ETAHook(
-              {} if config.use_tpu else dict(loss=model.total_loss, lm_acc=model.mlm_acc, lm_acc_2=model.mlm_acc_2),
+              {} if config.use_tpu else dict(loss=model.total_loss, lm_acc=model.mlm_acc, erm=model.effective_mask_rate),
               config.num_train_steps, config.iterations_per_loop,
               config.use_tpu)]
       )

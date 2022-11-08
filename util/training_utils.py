@@ -80,8 +80,6 @@ class ETAHook(tf.estimator.SessionRunHook):
         (self._n_steps - step) * time_per_step)
     if run_values is not None:
       for tag, value in run_values.results.items():
-        #TODO Debug
-        print(tag, value)
         msg += " - " + str(tag) + (": {:.4f}".format(value))
     utils.log(msg)
 
