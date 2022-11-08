@@ -50,10 +50,10 @@ class PretrainingModel(object):
 
     # Mask the input
     unmasked_inputs = pretrain_data.features_to_inputs(features)
-    print(self._config.train_batch_size)
-    print(unmasked_inputs.input_ids.shape)
+    #print(self._config.train_batch_size)
+    #print(unmasked_inputs.input_ids.shape)
     # NRP NOTE TODO: Do we do EMR maintainance in this function? Seems like the best place but hard to say - maybe metrics not available?
-    # NRP NOTE TODO: I may just hope that this is a batch and not the full inputs.
+    # NRP NOTE TODO: This runs on one batch, not the whole input, so doing dynamic masking per batch seems feasible, thank god.
     masked_inputs = pretrain_helpers.mask(
         config, unmasked_inputs, config.mask_prob)
 
@@ -118,6 +118,12 @@ class PretrainingModel(object):
 
     # Evaluation
 
+    #NRP NOTE TODO: Trying to calculate MLM acc outside of metric function.
+    self.mlm_acc = tf.metrics.accuracy(
+          labels=tf.reshape(masked_inputs.masked_lm_ids, [-1]),
+          predictions=tf.reshape(mlm_output.preds, [-1]),
+          weights=tf.reshape(masked_inputs.masked_lm_weights, [-1]))
+
     eval_fn_inputs = {
         "input_ids": masked_inputs.input_ids,
         "masked_lm_preds": mlm_output.preds,
@@ -143,6 +149,8 @@ class PretrainingModel(object):
       d = {k: arg for k, arg in zip(eval_fn_keys, args)}
       metrics = dict()
       # NRP NOTE TODO: how exactly is this being calculated? seems like what I want.
+      # NRP NOTE TODO: this is just leveraging a tf accuracy metric to output how many times [labels] matches [predictions].
+      # NRP NOTE TODO: The million dollar question is how to get this into mask().
       metrics["masked_lm_accuracy"] = tf.metrics.accuracy(
           labels=tf.reshape(d["masked_lm_ids"], [-1]),
           predictions=tf.reshape(d["masked_lm_preds"], [-1]),
@@ -380,7 +388,7 @@ def model_fn_builder(config: configure_pretraining.PretrainingConfig):
           loss=model.total_loss,
           train_op=train_op,
           training_hooks=[training_utils.ETAHook(
-              {} if config.use_tpu else dict(loss=model.total_loss),
+              {} if config.use_tpu else dict(loss=model.total_loss, lm_acc=model.mlm_acc),
               config.num_train_steps, config.iterations_per_loop,
               config.use_tpu)]
       )

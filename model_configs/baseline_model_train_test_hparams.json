@@ -2,7 +2,7 @@
 	"debug":true,
 	"model_size":"small",
 	"do_train":true,
-	"num_train_steps":10,
+	"num_train_steps":64,
 	"do_eval":false,
 	"pretrain_tfrecords": "/home/npetroce/data/pretrain_tfrecords/pretrain_data.tfrecord*"
 }
