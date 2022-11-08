@@ -50,10 +50,15 @@ class PretrainingModel(object):
 
     # Mask the input
     unmasked_inputs = pretrain_data.features_to_inputs(features)
+    print(self._config.train_batch_size)
+    print(unmasked_inputs.input_ids.shape)
+    # NRP NOTE TODO: Do we do EMR maintainance in this function? Seems like the best place but hard to say - maybe metrics not available?
+    # NRP NOTE TODO: I may just hope that this is a batch and not the full inputs.
     masked_inputs = pretrain_helpers.mask(
         config, unmasked_inputs, config.mask_prob)
 
     # Generator
+    # NRP NOTE TODO: This is where we should sub-in TinyBERT or Bert, perhaps?
     embedding_size = (
         self._bert_config.hidden_size if config.embedding_size is None else
         config.embedding_size)
@@ -77,6 +82,7 @@ class PretrainingModel(object):
             self._bert_config.vocab_size)
       else:
         # small masked language model generator
+        # NRP NOTE This is the baseline generator. We should include an additional clause here to use TinyBERT later.
         generator = build_transformer(
             config, masked_inputs, is_training, generator_config,
             embedding_size=(None if config.untied_generator_embeddings
@@ -85,11 +91,13 @@ class PretrainingModel(object):
             scope="generator")
         mlm_output = self._get_masked_lm_output(masked_inputs, generator)
     else:
+      # NRP NOTE I think we should never use this.
       # full-sized masked language model generator if using BERT objective or if
       # the generator and discriminator have tied weights
       generator = build_transformer(
           config, masked_inputs, is_training, self._bert_config,
           embedding_size=embedding_size)
+      # NRP NOTE TODO: this function seems to be what we need to override with BERT. Maybe add another clause there?
       mlm_output = self._get_masked_lm_output(masked_inputs, generator)
     fake_data = self._get_fake_data(masked_inputs, mlm_output.logits)
     self.mlm_output = mlm_output
@@ -97,6 +105,7 @@ class PretrainingModel(object):
         cloze_output.loss if config.two_tower_generator else mlm_output.loss)
 
     # Discriminator
+    # NRP NOTE this should be left unchanged.
     disc_output = None
     if config.electra_objective or config.electric_objective:
       discriminator = build_transformer(
@@ -108,6 +117,7 @@ class PretrainingModel(object):
       self.total_loss += config.disc_weight * disc_output.loss
 
     # Evaluation
+
     eval_fn_inputs = {
         "input_ids": masked_inputs.input_ids,
         "masked_lm_preds": mlm_output.preds,
@@ -132,6 +142,7 @@ class PretrainingModel(object):
       """Computes the loss and accuracy of the model."""
       d = {k: arg for k, arg in zip(eval_fn_keys, args)}
       metrics = dict()
+      # NRP NOTE TODO: how exactly is this being calculated? seems like what I want.
       metrics["masked_lm_accuracy"] = tf.metrics.accuracy(
           labels=tf.reshape(d["masked_lm_ids"], [-1]),
           predictions=tf.reshape(d["masked_lm_preds"], [-1]),
