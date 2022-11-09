@@ -141,3 +141,5 @@ class PretrainingConfig(object):
       if k not in self.__dict__:
         raise ValueError("Unknown hparam " + k)
       self.__dict__[k] = v
+    self.max_predictions_per_seq = int((self.mask_prob + 0.005) *
+                                       self.max_seq_length)

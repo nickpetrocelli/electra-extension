@@ -194,7 +194,7 @@ class PretrainingModel(object):
       return metrics
 
     # NRP TODO: testing using pass-by-reference to sneak in dynamic masking rate. See print statement at top of init.
-    config.update(mask_prob = config.mask_prob + 0.001)
+    config.update({"mask_prob": config.mask_prob + 0.001})
     self.eval_metrics = (metric_fn, eval_fn_values)
 
   def _get_masked_lm_output(self, inputs: pretrain_data.Inputs, model):
