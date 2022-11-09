@@ -406,7 +406,7 @@ def model_fn_builder(config: configure_pretraining.PretrainingConfig):
           loss=model.total_loss,
           train_op=train_op,
           training_hooks=[training_utils.ETAHook(
-              {} if config.use_tpu else (dict(loss=model.total_loss) if using_objective else dict(loss=model.total_loss, lm_acc=model.sampled_mlm_acc, erm=model.effective_mask_rate)),
+              {} if config.use_tpu else (dict(loss=model.total_loss) if not using_objective else dict(loss=model.total_loss, mask_pct = config.mask_prob, lm_acc=model.sampled_mlm_acc, erm=model.effective_mask_rate)),
               config.num_train_steps, config.iterations_per_loop,
               config.use_tpu)]
       )
