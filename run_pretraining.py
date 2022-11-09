@@ -54,6 +54,9 @@ class PretrainingModel(object):
     #print(unmasked_inputs.input_ids.shape)
     # NRP NOTE TODO: Do we do EMR maintainance in this function? Seems like the best place but hard to say - maybe metrics not available?
     # NRP NOTE TODO: This runs on one batch, not the whole input, so doing dynamic masking per batch seems feasible, thank god.
+    # NRP TODO testing attribute behavior
+    self.default_config = configure_pretraining.PretrainingConfig("dummy", "dummy")
+    print(config.mask_prob)
     masked_inputs = pretrain_helpers.mask(
         config, unmasked_inputs, config.mask_prob)
 
@@ -120,12 +123,14 @@ class PretrainingModel(object):
 
     #NRP NOTE TODO: Trying to calculate MLM acc outside of metric function.
     # Based on documentation this should be accurate
-    self.mlm_acc, _ = tf.metrics.accuracy(
-          labels=tf.reshape(masked_inputs.masked_lm_ids, [-1]),
-          predictions=tf.reshape(mlm_output.preds, [-1]),
-          weights=tf.reshape(masked_inputs.masked_lm_weights, [-1]))
-    #NRP NOTE TODO: this will need to change based on dynamic masking rate
-    self.effective_mask_rate = (1 - self.mlm_acc) * config.mask_prob
+    if config.electra_objective or config.electric_objective:
+      self.sampled_mlm_acc, _ = tf.metrics.accuracy(
+            labels=tf.reshape(masked_inputs.masked_lm_ids, [-1]),
+            predictions=tf.reshape(tf.argmax(fake_data.sampled_tokens, -1,
+                                      output_type=tf.int32), [-1]),
+            weights=tf.reshape(masked_inputs.masked_lm_weights, [-1]))
+      #NRP NOTE TODO: this will need to change based on dynamic masking rate
+      self.effective_mask_rate = (1 - self.sampled_mlm_acc) * config.mask_prob
 
     eval_fn_inputs = {
         "input_ids": masked_inputs.input_ids,
@@ -147,13 +152,13 @@ class PretrainingModel(object):
     eval_fn_keys = eval_fn_inputs.keys()
     eval_fn_values = [eval_fn_inputs[k] for k in eval_fn_keys]
 
+   
     def metric_fn(*args):
       """Computes the loss and accuracy of the model."""
       d = {k: arg for k, arg in zip(eval_fn_keys, args)}
       metrics = dict()
-      # NRP NOTE TODO: how exactly is this being calculated? seems like what I want.
-      # NRP NOTE TODO: this is just leveraging a tf accuracy metric to output how many times [labels] matches [predictions].
-      # NRP NOTE TODO: The million dollar question is how to get this into mask().
+      
+      # NRP: This is NOT what I want. This is calculated from a softmax over the logits, not from sampling.
       metrics["masked_lm_accuracy"] = tf.metrics.accuracy(
           labels=tf.reshape(d["masked_lm_ids"], [-1]),
           predictions=tf.reshape(d["masked_lm_preds"], [-1]),
@@ -162,10 +167,16 @@ class PretrainingModel(object):
           values=tf.reshape(d["mlm_loss"], [-1]),
           weights=tf.reshape(d["masked_lm_weights"], [-1]))
       if config.electra_objective or config.electric_objective:
+        # NRP: THIS is what I want. This is accuracy from sampling.
         metrics["sampled_masked_lm_accuracy"] = tf.metrics.accuracy(
             labels=tf.reshape(d["masked_lm_ids"], [-1]),
             predictions=tf.reshape(d["sampled_tokids"], [-1]),
             weights=tf.reshape(d["masked_lm_weights"], [-1]))
+        # NRP attempting to adhere to metric signature
+        metrics["effective_mask_rate"] = (
+          (1 - metrics["sampled_masked_lm_accuracy"][0]) * config.mask_prob,
+          tf.multiply(tf.subtract(1, metrics["sampled_masked_lm_accuracy"][1]), config.mask_prob)
+          )
         if config.disc_weight > 0:
           metrics["disc_loss"] = tf.metrics.mean(d["disc_loss"])
           metrics["disc_auc"] = tf.metrics.auc(
@@ -181,6 +192,9 @@ class PretrainingModel(object):
               labels=d["disc_labels"], predictions=d["disc_preds"],
               weights=d["disc_labels"] * d["input_mask"])
       return metrics
+
+    # NRP TODO: testing using pass-by-reference to sneak in dynamic masking rate. See print statement at top of init.
+    config.update(mask_prob = config.mask_prob + 0.001)
     self.eval_metrics = (metric_fn, eval_fn_values)
 
   def _get_masked_lm_output(self, inputs: pretrain_data.Inputs, model):
@@ -386,12 +400,13 @@ def model_fn_builder(config: configure_pretraining.PretrainingConfig):
           warmup_steps=config.num_warmup_steps,
           lr_decay_power=config.lr_decay_power
       )
+      using_objective = config.electra_objective or config.electric_objective
       output_spec = tf.estimator.tpu.TPUEstimatorSpec(
           mode=mode,
           loss=model.total_loss,
           train_op=train_op,
           training_hooks=[training_utils.ETAHook(
-              {} if config.use_tpu else dict(loss=model.total_loss, lm_acc=model.mlm_acc, erm=model.effective_mask_rate),
+              {} if config.use_tpu else (dict(loss=model.total_loss) if using_objective else dict(loss=model.total_loss, lm_acc=model.sampled_mlm_acc, erm=model.effective_mask_rate)),
               config.num_train_steps, config.iterations_per_loop,
               config.use_tpu)]
       )

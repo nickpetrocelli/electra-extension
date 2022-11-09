@@ -1,0 +1,7 @@
+{
+	"debug":true,
+	"model_size":"small",
+	"do_train":false,
+	"do_eval":true,
+	"pretrain_tfrecords": "/home/npetroce/data/pretrain_tfrecords/pretrain_data.tfrecord*"
+}
